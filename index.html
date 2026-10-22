@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Macro Tracker</title>
+<meta name="description" content="Log what you eat in plain words and see your daily calories, protein, carbs and fat.">
+<meta name="theme-color" content="#f4f5f9" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#14171f" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Macros">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="manifest" href="manifest.webmanifest">
+<style>
+:root{
+  --bg:#f4f5f9;--card:#ffffff;--text:#1d2433;--muted:#6b7385;--line:#e3e6ee;--soft:#eef1fb;
+  --accent:#4f6bed;--accent-press:#3d57d1;--danger:#d64545;
+  --kcal:#4f6bed;--protein:#e4572e;--carbs:#f0a202;--fat:#22a39f;
+  --radius:14px;--nav-h:58px;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root{--bg:#14171f;--card:#1d212c;--text:#e8eaf0;--muted:#9aa2b4;--line:#2c3140;--soft:#252a38;color-scheme:dark}
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--text)}
+body{font:16px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,system-ui,sans-serif;
+  padding-bottom:calc(var(--nav-h) + env(safe-area-inset-bottom) + 16px);min-height:100vh;overscroll-behavior-y:none}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+[hidden]{display:none!important}
+
+/* header */
+.top{position:sticky;top:0;z-index:5;background:var(--bg);display:flex;align-items:center;justify-content:center;gap:6px;
+  padding:calc(env(safe-area-inset-top) + 8px) 16px 8px}
+.top .icon{width:40px;height:40px;border-radius:12px;border:1px solid var(--line);background:var(--card);font-size:22px;line-height:1}
+.top .date{flex:1;max-width:320px;height:40px;border:0;background:transparent;font-weight:650;font-size:17px}
+.top .date small{display:block;font-weight:500;font-size:12px;color:var(--muted);margin-top:-2px}
+main{max-width:640px;margin:0 auto;padding:4px 16px 0}
+
+/* cards & controls */
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:16px;margin-bottom:12px}
+.h2{display:block;font-weight:650;font-size:16px;margin:0 0 8px}
+.muted{color:var(--muted)}
+.small{font-size:13px}
+textarea,input[type=text],input[type=number],input[type=search],select{
+  width:100%;font-size:16px;padding:11px 12px;border-radius:10px;border:1px solid var(--line);background:var(--bg);outline:none}
+textarea{resize:vertical;min-height:84px}
+textarea:focus,input:focus,select:focus{border-color:var(--accent)}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0 12px}
+.chip{border:1px solid var(--line);background:var(--bg);border-radius:999px;padding:6px 12px;font-size:14px}
+.chip[aria-pressed=true]{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn{border:1px solid var(--line);background:var(--card);border-radius:10px;padding:10px 14px;font-weight:550}
+.btn:active{background:var(--soft)}
+.primary{width:100%;border:0;border-radius:12px;background:var(--accent);color:#fff;padding:13px;font-weight:650;font-size:16px}
+.primary:active{background:var(--accent-press)}
+.danger{color:var(--danger)}
+.row{display:flex;gap:8px;align-items:center}
+.row > *{flex:1}
+.status{margin-top:12px;font-size:14px;border-radius:10px;background:var(--soft);padding:10px 12px}
+.status .unknown{margin-top:8px;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.status .unknown button{border:1px dashed var(--accent);color:var(--accent);background:transparent;border-radius:999px;padding:4px 10px;font-size:13px}
+
+/* totals */
+.tiles{display:grid;grid-template-columns:1fr 1fr;gap:14px 16px}
+.tile .lbl{font-size:13px;color:var(--muted)}
+.tile .val{font-size:22px;font-weight:700;font-variant-numeric:tabular-nums}
+.tile .val span{font-size:13px;font-weight:500;color:var(--muted)}
+.bar{height:7px;background:var(--line);border-radius:6px;overflow:hidden;margin:6px 0 4px}
+.bar i{display:block;height:100%;border-radius:6px}
+.tile .sub{font-size:12px;color:var(--muted)}
+.tile .sub.over{color:var(--danger)}
+.split{display:flex;height:10px;border-radius:6px;overflow:hidden;background:var(--line);margin-top:16px}
+.legend{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-top:6px}
+.legend b{display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:5px;vertical-align:0}
+
+/* log */
+.meal{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);margin-bottom:12px;overflow:hidden}
+.meal header{display:flex;justify-content:space-between;align-items:baseline;padding:12px 16px;background:var(--soft);font-weight:650}
+.meal header span{font-weight:500;font-size:13px;color:var(--muted)}
+.item{display:flex;gap:10px;width:100%;text-align:left;border:0;border-top:1px solid var(--line);background:transparent;padding:11px 16px}
+.item:first-of-type{border-top:0}
+.item:active{background:var(--soft)}
+.item .name{flex:1;min-width:0}
+.item .name b{display:block;font-weight:600}
+.item .name small{display:block;color:var(--muted);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.item .kc{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.item .kc b{display:block}
+.item .kc small{color:var(--muted);font-size:12px}
+.empty{text-align:center;color:var(--muted);padding:28px 16px}
+
+/* foods list */
+.food{display:flex;justify-content:space-between;gap:10px;padding:10px 0;border-top:1px solid var(--line)}
+.food:first-child{border-top:0}
+.food b{font-weight:600}
+.food small{display:block;color:var(--muted);font-size:12px}
+.tag{font-size:11px;color:var(--accent);border:1px solid var(--accent);border-radius:6px;padding:0 5px;margin-left:6px;vertical-align:1px}
+.food .del{border:0;background:transparent;color:var(--danger);font-size:13px;padding:4px}
+
+/* bottom tabs */
+.tabs{position:fixed;left:0;right:0;bottom:0;z-index:6;display:flex;justify-content:space-around;background:var(--card);
+  border-top:1px solid var(--line);padding:6px 8px calc(env(safe-area-inset-bottom) + 6px)}
+.tabs button{flex:1;max-width:120px;border:0;background:transparent;color:var(--muted);font-size:11px;display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px 0}
+.tabs svg{width:24px;height:24px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.tabs button[aria-current=page]{color:var(--accent)}
+
+/* sheet dialog */
+dialog{border:0;padding:0;margin:auto auto 0;width:100%;max-width:640px;max-height:92vh;border-radius:18px 18px 0 0;background:var(--card);color:var(--text)}
+dialog::backdrop{background:rgba(10,12,20,.45)}
+@media (min-width:700px){dialog{margin:auto;border-radius:18px}}
+.sheet{padding:18px 16px calc(env(safe-area-inset-bottom) + 16px)}
+.sheet h3{margin:0 0 4px;font-size:18px}
+.sheet label{display:block;font-size:13px;color:var(--muted);margin:12px 0 4px}
+.sheet .grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 10px}
+.sheet .btns{display:flex;gap:8px;margin-top:18px}
+.sheet .btns .primary{flex:2}
+.sheet .btns .btn{flex:1}
+.radio{display:flex;gap:6px;margin-top:4px}
+.check{display:flex;gap:8px;align-items:center;margin-top:14px;font-size:14px}
+
+/* toast */
+#toast{position:fixed;left:50%;bottom:calc(var(--nav-h) + env(safe-area-inset-bottom) + 14px);transform:translateX(-50%) translateY(20px);
+  background:#1d2433;color:#fff;padding:10px 16px;border-radius:12px;font-size:14px;opacity:0;pointer-events:none;transition:.25s;max-width:calc(100% - 32px);z-index:20}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+.actions{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px}
+.actions .btn{padding:10px 6px;font-size:14px}
+
+@media print{.top,.tabs,.actions,#toast{display:none!important}body{padding:0;background:#fff}}
+</style>
+</head>
+<body>
+<header class="top">
+  <button class="icon" id="prevDay" aria-label="Previous day">‹</button>
+  <button class="date" id="dateBtn" aria-label="Go to today"></button>
+  <button class="icon" id="nextDay" aria-label="Next day">›</button>
+</header>
+
+<main>
+  <section id="view-today">
+    <div class="card">
+      <label class="h2" for="foodInput">What did you eat?</label>
+      <textarea id="foodInput" rows="3" enterkeyhint="done" autocapitalize="none"
+        placeholder="e.g. 2 chapati, 150g rice, 1 katori dal, 250ml milk"></textarea>
+      <div class="chips" id="mealChips" role="group" aria-label="Meal"></div>
+      <button class="primary" id="addBtn">Add food</button>
+      <div class="status" id="status" hidden></div>
+    </div>
+    <div class="card" id="totals"></div>
+    <div id="log"></div>
+  </section>
+
+  <section id="view-report" hidden>
+    <div class="actions">
+      <button class="btn" id="shareReport">Share report</button>
+      <button class="btn" id="shareCsv">Export CSV</button>
+      <button class="btn" id="printReport">Print / PDF</button>
+    </div>
+    <div id="report"></div>
+  </section>
+
+  <section id="view-foods" hidden>
+    <div class="card">
+      <div class="row">
+        <input type="search" id="foodSearch" placeholder="Search foods" autocapitalize="none">
+        <button class="btn" id="addCustom" style="flex:0 0 auto">+ Add food</button>
+      </div>
+      <p class="small muted" style="margin:10px 0 0">Values per 100 g (or 100 ml for drinks, dal and curries).</p>
+    </div>
+    <div class="card" id="foodList"></div>
+  </section>
+
+  <section id="view-settings" hidden>
+    <div class="card">
+      <span class="h2">Daily targets</span>
+      <div class="sheet" style="padding:0">
+        <div class="grid2" id="targetFields"></div>
+        <div class="btns">
+          <button class="btn" id="autoTargets">Fill P/C/F from calories</button>
+          <button class="primary" id="saveTargets">Save targets</button>
+        </div>
+        <p class="small muted" style="margin:8px 0 0">“Fill” splits calories 25% protein · 50% carbs · 25% fat.</p>
+      </div>
+    </div>
+    <div class="card">
+      <span class="h2">Backup</span>
+      <p class="small muted" style="margin:0 0 12px">Your logs are saved only on this device. Export a backup now and then — deleting the app from your Home Screen also deletes its data.</p>
+      <div class="row">
+        <button class="btn" id="exportBackup">Export backup</button>
+        <button class="btn" id="importBackup">Import backup</button>
+      </div>
+      <input type="file" id="importFile" accept=".json,application/json" hidden>
+    </div>
+    <div class="card small muted">
+      <b style="color:var(--text)">Macro Tracker</b><br>
+      Values are estimates for typical Indian home-style recipes; brands and recipes vary. Add packaged foods from their label under Foods for exact numbers.
+    </div>
+  </section>
+</main>
+
+<nav class="tabs" aria-label="Sections">
+  <button data-view="today" aria-current="page"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Log</button>
+  <button data-view="report"><svg viewBox="0 0 24 24"><path d="M5 20V10M12 20V4M19 20v-7"/></svg>Report</button>
+  <button data-view="foods"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/></svg>Foods</button>
+  <button data-view="settings"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2.8v2.4M12 18.8v2.4M4.2 7.5l2 1.2M17.8 15.3l2 1.2M4.2 16.5l2-1.2M17.8 8.7l2-1.2"/></svg>Settings</button>
+</nav>
+
+<dialog id="sheet"><div class="sheet" id="sheetBody"></div></dialog>
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script src="foods.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
